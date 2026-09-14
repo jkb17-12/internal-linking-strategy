@@ -1,0 +1,9 @@
+# OS / editor cruft
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.tmp
+~$*
+
+# Local scratch
+/scratch/
