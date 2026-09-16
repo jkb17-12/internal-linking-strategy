@@ -4,6 +4,10 @@ Run this inside Claude for any client. It produces paste-ready internal-link
 recommendations for a list of blog posts. Copy the steps below to Claude, or just
 say **"Follow WORKFLOW.md for these blogs: <list>"**.
 
+> **The output must match `OUTPUT-FORMAT.md` exactly** — same file names, same block
+> format, same two-tab spreadsheet, same rules — for every client. Do not vary the shape;
+> only the client name and URLs change.
+
 ---
 
 ## Inputs you provide
@@ -53,11 +57,23 @@ Anchor: <verbatim text>  Target: <url>
 Anchor: <verbatim text>  Target: <url>
 ```
 
-## Step 5 — QA before publishing
+## Step 5 — Build the spreadsheet
+Turn `output/recommendations.md` into the standard two-tab Excel file (Excel must be installed):
+
+```
+powershell -ExecutionPolicy Bypass -File tools\build-xlsx.ps1 -Client <client-slug>
+```
+
+This writes `output/<client-slug>-internal-links.xlsx` with the fixed `Sheet-Ready` and
+`Detailed` tabs. Never hand-build the spreadsheet — always generate it from recommendations.md
+so it stays identical across clients.
+
+## Step 6 — QA before publishing
 - Every anchor is a real substring of the live page. ✅
 - Every target returns 200 and is in the inventory (no guessed URLs). ✅
 - Each post has at least one service-page link where relevant. ✅
 - No post links to itself. ✅
+- `recommendations.md` and the `.xlsx` both exist and match `OUTPUT-FORMAT.md`. ✅
 
 ## Notes on scaling
 For large blog lists, process in batches (≈9 blogs each) using parallel workers,

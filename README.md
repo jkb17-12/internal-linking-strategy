@@ -32,12 +32,20 @@ Doing internal linking one blog at a time is slow. This process fans the work ou
 internal-linking-strategy/
 ├── README.md                 <- you are here
 ├── WORKFLOW.md               <- the reusable step-by-step prompt (run this in Claude for ANY client)
+├── OUTPUT-FORMAT.md          <- the locked output standard (same shape for every client)
+├── TEAM-INSTRUCTIONS.md      <- how a teammate uses this repo with Claude Code
+├── tools/
+│   └── build-xlsx.ps1        <- turns recommendations.md into the standard 2-tab .xlsx (needs Excel)
 ├── data/
 │   └── link-inventory.csv    <- the site's linkable pages (url, type, priority, topic)
 └── output/
     ├── batch-01.md ...        <- raw worker output per batch
-    └── recommendations.md     <- final compiled, paste-ready results
+    ├── recommendations.md     <- final compiled, paste-ready results (canonical text output)
+    └── <client>-internal-links.xlsx  <- generated spreadsheet (Sheet-Ready + Detailed tabs)
 ```
+
+**Output shape is fixed** — see [OUTPUT-FORMAT.md](OUTPUT-FORMAT.md). Every client and teammate
+gets the same `recommendations.md` block format and the same two-tab spreadsheet.
 
 ## How to run it (inside Claude)
 
