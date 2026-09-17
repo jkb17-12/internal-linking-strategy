@@ -7,24 +7,35 @@
     2. Detailed             one row per verbatim link
     3. Suggested-Additions  one row per SUGGEST: block (new copy to add: sentence + placement)
 
-  Usage (from anywhere):
-    powershell -ExecutionPolicy Bypass -File tools\build-xlsx.ps1
-    powershell -ExecutionPolicy Bypass -File tools\build-xlsx.ps1 -Client "big-smile-dental"
+  This tool is client-agnostic. Point it at ONE client's recommendations file per run — the
+  file you feed is the source of truth. The convention is per-client filenames:
+    output/<client>-recommendations.md  ->  output/<client>-internal-links.xlsx
 
-  -In     path to recommendations.md   (default: ..\output\recommendations.md)
-  -Out    path to the .xlsx to write    (default: ..\output\internal-links.xlsx,
-                                          or ..\output\<Client>-internal-links.xlsx)
-  -Client optional slug used to name the output file
+  Usage (from anywhere):
+    powershell -ExecutionPolicy Bypass -File tools\build-xlsx.ps1 -Client "big-smile-dental"
+    powershell -ExecutionPolicy Bypass -File tools\build-xlsx.ps1 -In path\to\<client>-recommendations.md
+
+  -Client slug that names BOTH the input and output by convention (recommended way to run).
+  -In     explicit path to a <client>-recommendations.md (overrides the -Client default).
+  -Out    explicit path to the .xlsx to write (defaults to <client>-internal-links.xlsx).
 #>
 param(
-  [string]$In     = "$PSScriptRoot\..\output\recommendations.md",
+  [string]$In     = '',
   [string]$Out    = '',
   [string]$Client = ''
 )
 $ErrorActionPreference = 'Stop'
 
+# Resolve the input file. Prefer an explicit -In; otherwise derive it from -Client.
+# There is deliberately NO fixed single-site default — you must say which client.
+if (-not $In) {
+  if ($Client) { $In = "$PSScriptRoot\..\output\$Client-recommendations.md" }
+  else { throw "Provide -Client <slug> (uses output\<slug>-recommendations.md) or -In <path to a recommendations.md>." }
+}
+
 if (-not $Out) {
-  $name = if ($Client) { "$Client-internal-links.xlsx" } else { 'internal-links.xlsx' }
+  $base = [System.IO.Path]::GetFileNameWithoutExtension($In) -replace '-recommendations$',''
+  $name = if ($Client) { "$Client-internal-links.xlsx" } else { "$base-internal-links.xlsx" }
   $Out = Join-Path (Split-Path $In -Parent) $name
 }
 if (-not (Test-Path $In)) { throw "Cannot find recommendations file: $In" }
@@ -61,7 +72,7 @@ if ($cur) { [void]$blogs.Add($cur) }
 if ($blogs.Count -eq 0) { throw "No 'BLOG:' entries found in $In" }
 
 function Get-Type($u) {
-  if ($u -match '/(our-services|services|service)/') { return 'Service' }
+  if ($u -match '/(our-services|dental-services|services|service)/') { return 'Service' }
   if ($u -match '/(about|about-us|our-doctors|our-team|meet-the-team|contact|contact-us|location|locations|payment|payment-options|financing|gallery|smile-gallery|book|appointment|our-office)') { return 'Key Page' }
   return 'Blog'
 }

@@ -1,0 +1,11 @@
+url,type,priority,topic
+# This is a TEMPLATE, not real data. Copy it to data/link-inventory-<client>.csv and fill it
+# from the CLIENT'S OWN sitemap/crawl (the input you feed this run is the source of truth).
+# priority 1 = service pages (link here first) | 2 = key/trust pages | 3 = other blogs.
+# type is free-text (service/homepage/key/blog). Delete these comment lines and the example rows.
+https://example-dentist.com/services/,service,1,All services overview
+https://example-dentist.com/services/dental-implants/,service,1,Dental implants
+https://example-dentist.com/services/invisalign/,service,1,Invisalign / clear aligners
+https://example-dentist.com/contact/,key,2,Contact / request appointment
+https://example-dentist.com/about/our-doctors/,key,2,Meet the dentists
+https://example-dentist.com/blog/how-long-do-veneers-last/,blog,3,Veneers lifespan

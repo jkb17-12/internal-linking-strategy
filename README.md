@@ -39,27 +39,35 @@ internal-linking-strategy/
 │       └── blog-internal-linking/
 │           └── SKILL.md      <- the process as a Claude skill (auto-triggers on internal-linking asks)
 ├── tools/
-│   └── build-xlsx.ps1        <- turns recommendations.md into the standard 3-tab .xlsx (needs Excel)
+│   └── build-xlsx.ps1        <- turns <client>-recommendations.md into the standard 3-tab .xlsx (needs Excel)
 ├── data/
-│   └── link-inventory.csv    <- the site's linkable pages (url, type, priority, topic)
+│   ├── link-inventory.TEMPLATE.csv      <- copy this to start a new client (no real site data)
+│   └── link-inventory-<client>.csv      <- ONE client's linkable pages (url, type, priority, topic)
 └── output/
-    ├── recommendations.md     <- final compiled, paste-ready results (canonical text output)
-    └── <client>-internal-links.xlsx  <- spreadsheet (Sheet-Ready + Detailed + Suggested-Additions tabs)
+    ├── <client>-recommendations.md      <- that client's compiled, paste-ready results
+    └── <client>-internal-links.xlsx     <- spreadsheet (Sheet-Ready + Detailed + Suggested-Additions tabs)
 ```
+
+> **Source of truth = what you feed each run.** The repo ships **no** site-specific data. Every file
+> is per-client (`data/link-inventory-<client>.csv`, `output/<client>-recommendations.md`, …), so one
+> client's data never stands in for another. Committed example runs (e.g. `big-smile-dental`,
+> `norman-and-gill`, `mint-dental`) are samples, not defaults.
 
 > **This process is also a Claude skill** (`.claude/skills/blog-internal-linking/`). When this repo
 > is open in Claude Code, asking for internal links on a list of blogs auto-triggers the correct
 > live-content / verbatim-anchor / service-page-first process — no need to name a skill or file.
 
 **Output shape is fixed** — see [OUTPUT-FORMAT.md](OUTPUT-FORMAT.md). Every client and teammate
-gets the same `recommendations.md` block format and the same two-tab spreadsheet.
+gets the same `<client>-recommendations.md` block format and the same three-tab spreadsheet.
 
 ## How to run it (inside Claude)
 
 1. Open this repo folder in **Claude Code** (the "No folder" session already points here).
 2. Give Claude the **client site + the list of blog URLs** that need links, and say:
    > "Follow WORKFLOW.md for these blogs."
-3. Claude builds/updates `data/link-inventory.csv` from the live sitemap, processes the blogs, and writes `output/recommendations.md`.
+3. Claude builds `data/link-inventory-<client>.csv` from that client's live sitemap (or from an
+   inventory you provide — what you feed is the source of truth), processes the blogs, and writes
+   `output/<client>-recommendations.md`.
 4. Copy each blog's block into the sheet's **Blog Links** tab and set Status.
 
 ## The linking rules (what "good" looks like)
@@ -77,4 +85,8 @@ After Claude updates files, open **GitHub Desktop → Commit to main → Push or
 
 ## Adapting to a new client
 
-Everything is site-agnostic except `data/link-inventory.csv`. For a new client, regenerate that file from the client's sitemap (`/sitemap_index.xml`) — see WORKFLOW.md, Step 1. Service pages get priority `1`.
+The whole process is site-agnostic — nothing is hardcoded to one website. For a new client, copy
+`data/link-inventory.TEMPLATE.csv` to `data/link-inventory-<client>.csv` and fill it from **that
+client's** sitemap (`/sitemap_index.xml`), or feed your own crawl/CSV — the input you provide is the
+source of truth. Service pages get priority `1`. Then run WORKFLOW.md; outputs are written per-client
+(`output/<client>-recommendations.md` / `-internal-links.xlsx`).

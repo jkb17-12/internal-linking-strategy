@@ -27,18 +27,28 @@ relevant **service pages**. Output matches this repo's `OUTPUT-FORMAT.md` exactl
 > `OUTPUT-FORMAT.md`, and `tools/build-xlsx.ps1` are the source of truth — follow them.
 > This skill encodes the same process so it triggers automatically and works standalone.
 
-## Inputs to confirm before starting
-- **Client domain** (e.g. `bigsmiledental.com`).
-- **Blog URLs that need links** (usually the blank rows in the sheet's "Blog Links" tab).
-- Whether a `data/link-inventory.csv` already exists for this client. If not, build it (Step 1).
+## Source of truth = what the user feeds this run
+This process is **client-agnostic** and is never tied to one website. The repo ships no site-specific
+data. For every run, the inputs the user provides are the source of truth. Never reuse another
+client's inventory, domain, or recommendations, and never read a generic default inventory file —
+always use this client's own `data/link-inventory-<client>.csv`.
 
-If the blog list or domain is missing, ask for it. Do not invent URLs.
+## Inputs to confirm before starting
+- **Client domain** (e.g. `example-dentist.com`).
+- **Blog URLs that need links** (usually the blank rows in the sheet's "Blog Links" tab).
+- **The client's page inventory** — use the sitemap/crawl/CSV the user provides if any; otherwise
+  build `data/link-inventory-<client>.csv` from that client's own sitemap (Step 1). Start from
+  `data/link-inventory.TEMPLATE.csv`.
+
+If the blog list or domain is missing, ask for it. Do not invent URLs, and do not fall back to a
+different client's data.
 
 ## Step 1 — Build the link inventory (targets)
-Only if `data/link-inventory.csv` doesn't already cover this client.
+Use the inventory the user fed if they provided one; otherwise build it from the **client's own**
+sitemap into `data/link-inventory-<client>.csv` (copy `data/link-inventory.TEMPLATE.csv` to start).
 1. Fetch `https://<domain>/sitemap_index.xml`, then each child sitemap (`page-sitemap.xml`,
    `post-sitemap.xml`, etc.).
-2. Write every linkable URL to `data/link-inventory.csv` with columns `url,type,priority,topic`:
+2. Write every linkable URL to `data/link-inventory-<client>.csv` with columns `url,type,priority,topic`:
    - `priority 1` = **service pages** (e.g. anything under `/our-services/`) → link here first.
    - `priority 2` = **key trust pages** (doctors/about, contact, location, payment, gallery).
    - `priority 3` = **other blog posts**.
@@ -56,7 +66,7 @@ guessing its content.
 For each blog pick **4–6** internal links:
 - **Anchor text must be a verbatim substring** of that blog's live body text — a phrase a reader
   can actually see. Prefer natural noun phrases, 2–5 words. Never invent or reword a verbatim anchor.
-- **Target** must be a URL from `data/link-inventory.csv` and topically match the anchor.
+- **Target** must be a URL from this client's `data/link-inventory-<client>.csv` and topically match the anchor.
 - **Prioritize service pages** (priority 1) — aim for 2–3 per post when the topic allows. Use a
   trust page (e.g. `/about-us/our-doctors/`) when the text mentions the dentist, Dr. <name>,
   "consultation," or credentials.
@@ -81,7 +91,7 @@ as if it already exists on the page. If a post supports neither verbatim nor nat
 return fewer (minimum 2). Don't force it.
 
 ## Step 4 — Output (paste-ready)
-Write `output/recommendations.md`: a short header (client + date), then one block per blog.
+Write `output/<client>-recommendations.md`: a short header (client + date), then one block per blog.
 Verbatim links use `Anchor:` lines; suggested additions use a `SUGGEST:` block after them:
 
 ```
@@ -97,27 +107,29 @@ Exact labels and the **two spaces** before `Target:` matter — `tools/build-xls
 One blank line between blogs. See `OUTPUT-FORMAT.md` for the full standard.
 
 ## Step 5 — Build the spreadsheet
-Generate the standard workbook from `recommendations.md` (Excel required):
+Generate the standard workbook (Excel required). Pass the client slug — the tool reads
+`output/<client-slug>-recommendations.md` and writes `output/<client-slug>-internal-links.xlsx`:
 
 ```
 powershell -ExecutionPolicy Bypass -File tools\build-xlsx.ps1 -Client <client-slug>
 ```
 
-Produces `output/<client-slug>-internal-links.xlsx` with three tabs: `Sheet-Ready` (one row per
-blog), `Detailed` (one row per verbatim link), and `Suggested-Additions` (one row per `SUGGEST:`
-block). Never hand-build the spreadsheet — always generate it so it stays identical across clients.
+Three tabs: `Sheet-Ready` (one row per blog), `Detailed` (one row per verbatim link), and
+`Suggested-Additions` (one row per `SUGGEST:` block). `-Client` (or an explicit `-In`) is required —
+there is no fixed single-site default. Never hand-build the spreadsheet.
 
 ## Step 6 — QA before publishing
 - Every `Anchor:` is a real substring of the live page.
 - Every `SUGGEST:` has a full sentence + exact placement, reads naturally, and points to a relevant
   (ideally service) page; the anchor phrase appears inside its own suggested sentence.
-- Every target is in the inventory (no guessed URLs) and isn't the blog itself.
+- Every target is in **this client's** inventory (no guessed URLs, no other site's URLs) and isn't the blog itself.
 - Each post has at least one service-page link where the topic allows.
-- `recommendations.md` and the `.xlsx` match `OUTPUT-FORMAT.md`.
+- `output/<client>-recommendations.md` and the `.xlsx` match `OUTPUT-FORMAT.md`.
 
 ## Scaling
 For large blog lists, process in batches (~9 blogs each) with parallel workers, one output file per
-batch, then compile into a single `output/recommendations.md` before building the spreadsheet.
+batch (`output/<client>-batch-01.md` …), then compile into a single
+`output/<client>-recommendations.md` before building the spreadsheet.
 
 ## Anti-patterns
 - Don't reword or invent verbatim anchors, or point a link to a page not in the inventory.
