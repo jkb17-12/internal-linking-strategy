@@ -43,7 +43,31 @@ For each blog, pick **4–6** internal links:
   Dr. <name>, "consultation," or credentials.
 - No self-links. No duplicate anchors in a post. Don't send two anchors to the same target.
 - Spread anchors across the beginning, middle, and end of the article.
-- Thin post / few natural anchors → return fewer (minimum 2). Don't force it.
+
+### Step 3b — When there are few verbatim anchor opportunities (suggested anchors)
+Some blogs are thin, or their existing wording gives no natural hook to an important
+**service page**. When you cannot reach a good link count from verbatim anchors alone
+(typically fewer than ~4 usable verbatim anchors), you MAY propose **suggested anchors** —
+a short piece of *new* copy to add to the post — instead of forcing an awkward existing phrase.
+
+A suggested anchor is only valid if it includes **all three** of:
+1. **A full sentence to add** — natural, factually accurate, and genuinely relevant to that blog's
+   topic. It must read like it belongs in the article, not like an inserted ad. The anchor phrase
+   is a substring of this sentence.
+2. **The exact placement** — where in the live article the sentence should be inserted
+   (e.g. "at the end of the *Causes* section, after the paragraph on dehydration" or
+   "in the conclusion, before the final call-to-action"). Reference a real section/paragraph
+   that exists on the live page.
+3. **A target** from `data/link-inventory.csv` — prioritize a relevant **service page**
+   (adding a sentence is usually how you earn a missing service-page link).
+
+Rules for suggested anchors:
+- Use them to *supplement* verbatim anchors, never to replace easy verbatim wins.
+- Keep them rare and high-value — 1–2 per thin post at most. Don't pad.
+- Never present a suggested sentence as if it already exists on the page. It is labeled
+  separately (see `SUGGEST:` in Step 4) because the editor has to **add** it.
+- If a post genuinely supports neither verbatim nor natural suggested links, return fewer
+  (minimum 2 total). Don't force it.
 
 ## Step 4 — Output (paste-ready)
 Write `output/recommendations.md`. For each blog, produce a single block matching
@@ -57,6 +81,20 @@ Anchor: <verbatim text>  Target: <url>
 Anchor: <verbatim text>  Target: <url>
 ```
 
+`Anchor:` lines are **verbatim** (the phrase already exists on the live page — find it and hyperlink it).
+
+For **suggested anchors** (Step 3b — new copy the editor must add), use a `SUGGEST:` block with an
+indented `Sentence:` and `Placement:` under it:
+
+```
+SUGGEST: <anchor phrase>  Target: <url>
+  Sentence: <full sentence to add, containing the anchor phrase, reads naturally in context>
+  Placement: <exactly where to insert it in the live article>
+```
+
+List `SUGGEST:` blocks after the verbatim `Anchor:` lines within the same `BLOG:` block. They are
+kept visibly separate so no one mistakes added copy for existing text.
+
 ## Step 5 — Build the spreadsheet
 Turn `output/recommendations.md` into the standard two-tab Excel file (Excel must be installed):
 
@@ -69,7 +107,9 @@ This writes `output/<client-slug>-internal-links.xlsx` with the fixed `Sheet-Rea
 so it stays identical across clients.
 
 ## Step 6 — QA before publishing
-- Every anchor is a real substring of the live page. ✅
+- Every `Anchor:` is a real substring of the live page. ✅
+- Every `SUGGEST:` has a full sentence + exact placement, reads naturally, and points to a
+  relevant (ideally service) page. The anchor phrase appears inside its own suggested sentence. ✅
 - Every target returns 200 and is in the inventory (no guessed URLs). ✅
 - Each post has at least one service-page link where relevant. ✅
 - No post links to itself. ✅

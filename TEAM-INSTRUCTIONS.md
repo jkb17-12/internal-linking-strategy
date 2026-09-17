@@ -70,6 +70,10 @@ GitHub Desktop → you'll see the changed files → write a short summary
 - **Target priority:** service pages first → key pages (doctors, contact, location, payment)
   → other blogs. Aim for 2–3 service-page links per post.
 - **No self-links**, no duplicate anchors in a post, links spread through the article.
+- **Few natural anchors on a thin post?** Claude may add a **suggested anchor** (`SUGGEST:` block):
+  a full sentence to insert, exactly where to put it, and a service-page target. It's new copy you
+  **add** to the blog — relevant and natural — so it's listed separately (in `recommendations.md`
+  and the `Suggested-Additions` tab), never mixed with the verbatim links.
 
 ## Good to know
 

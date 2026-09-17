@@ -26,6 +26,27 @@ Rules that make the block valid:
 > The two spaces before `Target:` and the exact `BLOG:` / `Anchor:` / `Target:` labels matter —
 > `tools/build-xlsx.ps1` parses on them. Don't reformat.
 
+### Suggested anchors (`SUGGEST:` blocks)
+
+`Anchor:` lines are **verbatim** — the phrase already exists on the live page. When a post is thin
+or has no natural hook for an important (usually service) page, add a **suggested anchor**: a short
+piece of new copy the editor inserts. Format, placed after the verbatim `Anchor:` lines in the same
+`BLOG:` block:
+
+```
+SUGGEST: <anchor phrase>  Target: <full internal url>
+  Sentence: <full sentence to add, containing the anchor phrase, reads naturally>
+  Placement: <exactly where to insert it in the live article>
+```
+
+Rules that make a `SUGGEST:` block valid:
+- The header line is `SUGGEST: ` + anchor phrase + **two spaces** + `Target: ` + URL.
+- The next two lines are indented `  Sentence: …` and `  Placement: …` (both required).
+- The anchor phrase is a substring of the suggested sentence.
+- The sentence is relevant, accurate, and natural for that blog; the placement names a real
+  section/paragraph on the live page.
+- Suggested anchors supplement verbatim ones — 1–2 per thin post at most, never padding.
+
 ## 2. The Excel file `output/<client>-internal-links.xlsx` (generated, never hand-typed)
 
 Built by `tools/build-xlsx.ps1` from `recommendations.md`. Two tabs, fixed columns:
@@ -36,11 +57,20 @@ Built by `tools/build-xlsx.ps1` from `recommendations.md`. Two tabs, fixed colum
 |---|---|---|
 | blog URL | all `Anchor: … Target: …` pairs for that blog, one per line in the cell | (left blank) |
 
-**Tab 2 — `Detailed`** (one row per individual link)
+**Tab 2 — `Detailed`** (one row per individual verbatim link)
 
 | Blog URL | Anchor Text | Target URL | Target Type |
 |---|---|---|---|
 | blog URL | anchor | target URL | Service / Key Page / Blog |
+
+**Tab 3 — `Suggested-Additions`** (one row per `SUGGEST:` block — new copy the editor must add)
+
+| Blog URL | Suggested Anchor | Sentence To Add | Placement | Target URL | Target Type |
+|---|---|---|---|---|---|
+| blog URL | anchor phrase | full sentence to insert | where to insert it | target URL | Service / Key Page / Blog |
+
+This tab only appears populated when a run produced suggested anchors; verbatim links never
+appear here, and suggested rows never appear in `Sheet-Ready`/`Detailed`.
 
 ---
 
@@ -51,6 +81,9 @@ Built by `tools/build-xlsx.ps1` from `recommendations.md`. Two tabs, fixed colum
 - **Priority: Service pages first**, then Key pages (doctors/about, contact, location, payment,
   gallery), then other blogs. Aim for 2–3 service-page links per post.
 - No self-links, no duplicate anchor within a post, links spread through the article.
+- **Few verbatim opportunities?** Supplement with `SUGGEST:` blocks — new copy the editor adds —
+  each with a natural, relevant full sentence, an exact placement, and (ideally) a service-page
+  target. Suggested copy is always labeled separately, never mixed into verbatim links.
 
 ## 4. Regenerating the spreadsheet
 

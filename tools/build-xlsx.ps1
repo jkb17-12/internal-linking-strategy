@@ -1,6 +1,11 @@
 <#
-  build-xlsx.ps1  —  Turns output/recommendations.md into the standard two-tab Excel file.
+  build-xlsx.ps1  —  Turns output/recommendations.md into the standard Excel file.
   Same output for every client. Requires Microsoft Excel installed (Windows).
+
+  Tabs produced:
+    1. Sheet-Ready          one row per blog (verbatim links, mirrors the Blog Links tab)
+    2. Detailed             one row per verbatim link
+    3. Suggested-Additions  one row per SUGGEST: block (new copy to add: sentence + placement)
 
   Usage (from anywhere):
     powershell -ExecutionPolicy Bypass -File tools\build-xlsx.ps1
@@ -19,25 +24,39 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if (-not $Out) {
-  $dir = Join-Path (Split-Path $In -Parent) ''
   $name = if ($Client) { "$Client-internal-links.xlsx" } else { 'internal-links.xlsx' }
   $Out = Join-Path (Split-Path $In -Parent) $name
 }
 if (-not (Test-Path $In)) { throw "Cannot find recommendations file: $In" }
 
-# --- Parse recommendations.md (canonical format: 'BLOG:' lines and 'Anchor: X  Target: Y' lines) ---
+# --- Parse recommendations.md ---
+#   BLOG: <url>
+#   Anchor: <verbatim>  Target: <url>                (verbatim links)
+#   SUGGEST: <anchor>  Target: <url>                 (suggested new copy)
+#     Sentence: <full sentence to add>
+#     Placement: <where to insert it>
 $lines = (Get-Content -Raw -Encoding UTF8 $In) -split "`r?`n"
 $blogs = New-Object System.Collections.ArrayList
 $cur = $null
+$curSug = $null
 foreach ($ln in $lines) {
   if ($ln -match '^BLOG:\s*(\S+)') {
+    if ($cur -and $curSug) { [void]$cur.Suggests.Add($curSug) }; $curSug = $null
     if ($cur) { [void]$blogs.Add($cur) }
-    $cur = [ordered]@{ Url = $matches[1]; Links = (New-Object System.Collections.ArrayList) }
+    $cur = [ordered]@{ Url = $matches[1]; Links = (New-Object System.Collections.ArrayList); Suggests = (New-Object System.Collections.ArrayList) }
   }
+  elseif ($ln -match '^SUGGEST:\s*(.+?)\s+Target:\s*(\S+)\s*$') {
+    if ($cur -and $curSug) { [void]$cur.Suggests.Add($curSug) }
+    $curSug = [pscustomobject]@{ Anchor = $matches[1].Trim(); Target = $matches[2].Trim(); Sentence = ''; Placement = '' }
+  }
+  elseif ($ln -match '^\s*Sentence:\s*(.+?)\s*$')  { if ($curSug) { $curSug.Sentence  = $matches[1].Trim() } }
+  elseif ($ln -match '^\s*Placement:\s*(.+?)\s*$') { if ($curSug) { $curSug.Placement = $matches[1].Trim() } }
   elseif ($ln -match '^Anchor:\s*(.+?)\s+Target:\s*(\S+)\s*$') {
+    if ($cur -and $curSug) { [void]$cur.Suggests.Add($curSug); $curSug = $null }
     if ($cur) { [void]$cur.Links.Add([pscustomobject]@{ Anchor = $matches[1].Trim(); Target = $matches[2].Trim() }) }
   }
 }
+if ($cur -and $curSug) { [void]$cur.Suggests.Add($curSug) }
 if ($cur) { [void]$blogs.Add($cur) }
 if ($blogs.Count -eq 0) { throw "No 'BLOG:' entries found in $In" }
 
@@ -48,7 +67,7 @@ function Get-Type($u) {
 }
 $nl = [char]10
 
-# --- Sheet 1: one row per blog (matches the Blog Links tab) ---
+# --- Sheet 1 data: one row per blog (verbatim links only) ---
 $sr = New-Object 'object[,]' $blogs.Count,3
 for ($i=0; $i -lt $blogs.Count; $i++) {
   $b = $blogs[$i]; $pairs = @()
@@ -56,13 +75,21 @@ for ($i=0; $i -lt $blogs.Count; $i++) {
   $sr[$i,0] = $b.Url; $sr[$i,1] = ($pairs -join $nl); $sr[$i,2] = ''
 }
 
-# --- Sheet 2: one row per link ---
+# --- Sheet 2 data: one row per verbatim link ---
 $det = New-Object System.Collections.ArrayList
 foreach ($b in $blogs) { foreach ($lk in $b.Links) {
   [void]$det.Add([pscustomobject]@{ Blog=$b.Url; Anchor=$lk.Anchor; Target=$lk.Target; Type=(Get-Type $lk.Target) })
 }}
-$dArr = New-Object 'object[,]' $det.Count,4
+$dArr = New-Object 'object[,]' ([Math]::Max($det.Count,1)),4
 for ($i=0; $i -lt $det.Count; $i++) { $dArr[$i,0]=$det[$i].Blog; $dArr[$i,1]=$det[$i].Anchor; $dArr[$i,2]=$det[$i].Target; $dArr[$i,3]=$det[$i].Type }
+
+# --- Sheet 3 data: one row per suggested addition ---
+$sug = New-Object System.Collections.ArrayList
+foreach ($b in $blogs) { foreach ($s in $b.Suggests) {
+  [void]$sug.Add([pscustomobject]@{ Blog=$b.Url; Anchor=$s.Anchor; Sentence=$s.Sentence; Placement=$s.Placement; Target=$s.Target; Type=(Get-Type $s.Target) })
+}}
+$sArr = New-Object 'object[,]' ([Math]::Max($sug.Count,1)),6
+for ($i=0; $i -lt $sug.Count; $i++) { $sArr[$i,0]=$sug[$i].Blog; $sArr[$i,1]=$sug[$i].Anchor; $sArr[$i,2]=$sug[$i].Sentence; $sArr[$i,3]=$sug[$i].Placement; $sArr[$i,4]=$sug[$i].Target; $sArr[$i,5]=$sug[$i].Type }
 
 # --- Build the workbook via Excel ---
 $xl = New-Object -ComObject Excel.Application
@@ -88,17 +115,36 @@ $ws2.Cells.Item(1,1) = 'Blog URL'
 $ws2.Cells.Item(1,2) = 'Anchor Text'
 $ws2.Cells.Item(1,3) = 'Target URL'
 $ws2.Cells.Item(1,4) = 'Target Type'
-$ws2.Range($ws2.Cells.Item(2,1), $ws2.Cells.Item(1+$det.Count,4)).Value2 = $dArr
+if ($det.Count -gt 0) { $ws2.Range($ws2.Cells.Item(2,1), $ws2.Cells.Item(1+$det.Count,4)).Value2 = $dArr }
 $ws2.Range('A1:D1').Font.Bold = $true
 $ws2.Columns.Item(1).ColumnWidth = 55
 $ws2.Columns.Item(2).ColumnWidth = 40
 $ws2.Columns.Item(3).ColumnWidth = 55
 $ws2.Columns.Item(4).ColumnWidth = 12
 
+$ws3 = $wb.Worksheets.Add([System.Reflection.Missing]::Value, $ws2); $ws3.Name = 'Suggested-Additions'
+$ws3.Cells.Item(1,1) = 'Blog URL'
+$ws3.Cells.Item(1,2) = 'Suggested Anchor'
+$ws3.Cells.Item(1,3) = 'Sentence To Add'
+$ws3.Cells.Item(1,4) = 'Placement'
+$ws3.Cells.Item(1,5) = 'Target URL'
+$ws3.Cells.Item(1,6) = 'Target Type'
+if ($sug.Count -gt 0) { $ws3.Range($ws3.Cells.Item(2,1), $ws3.Cells.Item(1+$sug.Count,6)).Value2 = $sArr }
+$ws3.Range('A1:F1').Font.Bold = $true
+$ws3.Columns.Item(1).ColumnWidth = 50
+$ws3.Columns.Item(2).ColumnWidth = 26
+$ws3.Columns.Item(3).ColumnWidth = 70
+$ws3.Columns.Item(4).ColumnWidth = 50
+$ws3.Columns.Item(5).ColumnWidth = 50
+$ws3.Columns.Item(6).ColumnWidth = 12
+$ws3.Columns.Item(3).WrapText = $true
+$ws3.Columns.Item(4).WrapText = $true
+$ws3.Rows.AutoFit() | Out-Null
+
 $ws1.Activate()
 $wb.SaveAs($Out, 51)   # 51 = .xlsx
 $wb.Close($false); $xl.Quit()
-foreach ($o in @($ws1,$ws2,$wb,$xl)) { [void][System.Runtime.Interopservices.Marshal]::ReleaseComObject($o) }
+foreach ($o in @($ws1,$ws2,$ws3,$wb,$xl)) { [void][System.Runtime.Interopservices.Marshal]::ReleaseComObject($o) }
 [GC]::Collect()
 
-Write-Output ("OK - {0} blogs, {1} links -> {2}" -f $blogs.Count, $det.Count, $Out)
+Write-Output ("OK - {0} blogs, {1} verbatim links, {2} suggested -> {3}" -f $blogs.Count, $det.Count, $sug.Count, $Out)

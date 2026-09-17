@@ -34,15 +34,22 @@ internal-linking-strategy/
 ├── WORKFLOW.md               <- the reusable step-by-step prompt (run this in Claude for ANY client)
 ├── OUTPUT-FORMAT.md          <- the locked output standard (same shape for every client)
 ├── TEAM-INSTRUCTIONS.md      <- how a teammate uses this repo with Claude Code
+├── .claude/
+│   └── skills/
+│       └── blog-internal-linking/
+│           └── SKILL.md      <- the process as a Claude skill (auto-triggers on internal-linking asks)
 ├── tools/
-│   └── build-xlsx.ps1        <- turns recommendations.md into the standard 2-tab .xlsx (needs Excel)
+│   └── build-xlsx.ps1        <- turns recommendations.md into the standard 3-tab .xlsx (needs Excel)
 ├── data/
 │   └── link-inventory.csv    <- the site's linkable pages (url, type, priority, topic)
 └── output/
-    ├── batch-01.md ...        <- raw worker output per batch
     ├── recommendations.md     <- final compiled, paste-ready results (canonical text output)
-    └── <client>-internal-links.xlsx  <- generated spreadsheet (Sheet-Ready + Detailed tabs)
+    └── <client>-internal-links.xlsx  <- spreadsheet (Sheet-Ready + Detailed + Suggested-Additions tabs)
 ```
+
+> **This process is also a Claude skill** (`.claude/skills/blog-internal-linking/`). When this repo
+> is open in Claude Code, asking for internal links on a list of blogs auto-triggers the correct
+> live-content / verbatim-anchor / service-page-first process — no need to name a skill or file.
 
 **Output shape is fixed** — see [OUTPUT-FORMAT.md](OUTPUT-FORMAT.md). Every client and teammate
 gets the same `recommendations.md` block format and the same two-tab spreadsheet.
@@ -61,6 +68,7 @@ gets the same `recommendations.md` block format and the same two-tab spreadsheet
 - **Anchor = verbatim substring** of the live article body. Natural noun phrases, 2–5 words.
 - **Target priority:** `1` service pages → `2` key/trust pages → `3` other blogs. Aim for 2–3 service-page links per post when the topic allows.
 - **No self-links**, no duplicate anchors within a post, spread links across the article.
+- **Few verbatim anchors?** Claude may add a **suggested anchor** — a `SUGGEST:` block with a full sentence to insert, its exact placement, and a (usually service-page) target. The added copy must be relevant and read naturally in the post, and is always labeled separately from verbatim links so the editor knows to add it. Kept to 1–2 per thin post.
 
 ## Publishing changes
 
